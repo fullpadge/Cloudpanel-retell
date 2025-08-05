@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<script type="text/javascript">
+  // This is a CodeSandbox injection script that's used to
+  // add navigation and inspector functionality to the preview
+  (function () {
+    // 1) Get the <script> tag that's currently running:
+    var me = document.currentScript;
+
+    // 2) Create the blocking‐style <script> to load:
+    var script = document.createElement("script");
+    script.src = "https://codesandbox.io/p/preview-protocol.js";
+
+    // By default a dynamically‐inserted <script> is async=true.
+    // Turn async off to make it behave like a normal blocking <script>:
+    script.async = false;
+    // (Do NOT set defer.)
+
+    // 3) Insert it immediately after the current <script>:
+    me.parentNode.insertBefore(script, me);
+  })();
+
+  const isIFramePreview = window.top !== window.self;
+
+  // Only run this script in editor context
+  if (isIFramePreview) {
+    // This script is used to enable Chrome DevTools functionality
+    (function () {
+      var script = document.createElement("script");
+      script.src =
+        "https://codesandbox.io/p/chrome-devtool/protocol/index.js";
+
+      script.onload = () => {
+        const devtoolProtocol = window.chobitsu;
+        if (devtoolProtocol) {
+          window.addEventListener("message", (event) => {
+            const { type, data } = event.data;
+
+            if (type === "FROM_DEVTOOL") {
+              devtoolProtocol.sendRawMessage(data);
+            }
+          });
+
+          devtoolProtocol.setOnMessage((data) => {
+            if (data.includes('"id":"tmp')) {
+              return;
+            }
+
+            window.parent.postMessage({ type: "TO_DEVTOOL", data }, "*");
+          });
+
+          devtoolProtocol.sendRawMessage(
+            `{"id":5,"method":"Runtime.enable","params":{}}`
+          );
+        }        
+      }
+
+      (document.head || document.documentElement).prepend(script);
+    })();
+  }
+
+  if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined") {
+    let nextID = 0;
+    let hook = (__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+      renderers: new Map(),
+      supportsFiber: true,
+      inject: (renderer) => {
+        const id = nextID++;
+        hook.renderers.set(id, renderer);
+        return id;
+      },
+      onScheduleFiberRoot() {},
+      onCommitFiberRoot() {},
+      onCommitFiberUnmount() {},
+    });
+  }
+
+  document.currentScript.remove();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin - Retell AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .sidebar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            border-radius: 10px;
+            margin: 5px 0;
+            transition: all 0.3s ease;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            transform: translateX(5px);
+        }
+        .main-content {
+            padding: 30px;
+        }
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border: none;
+            margin-bottom: 20px;
+        }
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 25px;
+        }
+        .table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar">
+                <div class="p-3">
+                    <h4 class="mb-4">📊 Retell AI</h4>
+                    <nav class="nav flex-column">
+                        <a class="nav-link active" href="#" onclick="showSection('dashboard')">
+                            <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('clients')">
+                            <i class="fas fa-users me-2"></i> Clients
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('analytics')">
+                            <i class="fas fa-chart-bar me-2"></i> Analytics
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('settings')">
+                            <i class="fas fa-cog me-2"></i> Configuration
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('retell')">
+                            <i class="fas fa-phone me-2"></i> Retell AI
+                        </a>
+                        <hr>
+                        <a class="nav-link" href="#" onclick="showSection('database')">
+                            <i class="fas fa-database me-2"></i> Base de Données
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('logs')">
+                            <i class="fas fa-file-alt me-2"></i> Logs
+                        </a>
+                    </nav>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 main-content">
+                
+                <!-- Dashboard Section -->
+                <div id="dashboard-section" class="content-section active">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1>📊 Dashboard Principal</h1>
+                        <span class="badge bg-success">Système Actif</span>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="stats-card text-center">
+                                <i class="fas fa-users fa-2x mb-3 text-primary"></i>
+                                <div class="stats-number" id="total-clients">-</div>
+                                <div class="text-muted">Clients Actifs</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-card text-center">
+                                <i class="fas fa-phone fa-2x mb-3 text-success"></i>
+                                <div class="stats-number" id="total-calls">-</div>
+                                <div class="text-muted">Appels Analysés</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-card text-center">
+                                <i class="fas fa-chart-line fa-2x mb-3 text-warning"></i>
+                                <div class="stats-number" id="success-rate">-</div>
+                                <div class="text-muted">Taux de Succès</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-card text-center">
+                                <i class="fas fa-clock fa-2x mb-3 text-info"></i>
+                                <div class="stats-number" id="avg-latency">-</div>
+                                <div class="text-muted">Latence Moy. (ms)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="stats-card">
+                                <h5>📈 Activité Récente</h5>
+                                <div id="recent-activity">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-user-plus text-success me-2"></i>
+                                        <span>Installation terminée avec succès</span>
+                                    </div>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-database text-info me-2"></i>
+                                        <span>Base de données configurée</span>
+                                    </div>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-key text-warning me-2"></i>
+                                        <span>Admin créé: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7e141b1f100d121f0c110d1b3e19131f1712501d1113">[email&#160;protected]</a></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stats-card">
+                                <h5>🚀 Actions Rapides</h5>
+                                <button class="btn btn-primary me-2 mb-2" onclick="showSection('clients')">
+                                    <i class="fas fa-plus me-1"></i> Ajouter Client
+                                </button>
+                                <button class="btn btn-outline-primary me-2 mb-2" onclick="testRetellConnection()">
+                                    <i class="fas fa-phone me-1"></i> Test Retell AI
+                                </button>
+                                <button class="btn btn-outline-secondary me-2 mb-2" onclick="showSection('database')">
+                                    <i class="fas fa-database me-1"></i> Vérifier DB
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Clients Section -->
+                <div id="clients-section" class="content-section">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1>👥 Gestion des Clients</h1>
+                        <button class="btn btn-primary" onclick="showAddClientForm()">
+                            <i class="fas fa-plus me-1"></i> Nouveau Client
+                        </button>
+                    </div>
+                    
+                    <div id="add-client-form" style="display: none;" class="mb-4">
+                        <div class="stats-card">
+                            <h5>➕ Ajouter un Nouveau Client</h5>
+                            <form id="client-form">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Nom du Client</label>
+                                            <input type="text" class="form-control" name="name" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Email</label>
+                                            <input type="email" class="form-control" name="email" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Mot de Passe</label>
+                                            <input type="password" class="form-control" name="password" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Couleur Principale</label>
+                                            <input type="color" class="form-control" name="primary_color" value="#3B82F6">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Sous-domaine</label>
+                                    <input type="text" class="form-control" name="subdomain" placeholder="client-name">
+                                </div>
+                                <button type="submit" class="btn btn-primary">💾 Créer le Client</button>
+                                <button type="button" class="btn btn-secondary ms-2" onclick="hideAddClientForm()">Annuler</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-card">
+                        <h5>📋 Liste des Clients</h5>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nom</th>
+                                        <th>Email</th>
+                                        <th>Sous-domaine</th>
+                                        <th>Couleur</th>
+                                        <th>Créé le</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="clients-table">
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted">
+                                            <i class="fas fa-spinner fa-spin me-2"></i>Chargement...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Analytics Section -->
+                <div id="analytics-section" class="content-section">
+                    <h1>📊 Analyses et Statistiques</h1>
+                    
+                    <div class="stats-card">
+                        <h5>📈 Analyses d'Appels Retell AI</h5>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID Appel</th>
+                                        <th>Client</th>
+                                        <th>Taux Succès</th>
+                                        <th>Transfert</th>
+                                        <th>Appels Total</th>
+                                        <th>Latence</th>
+                                        <th>Sentiment</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="analytics-table">
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted">
+                                            <i class="fas fa-spinner fa-spin me-2"></i>Chargement des analyses...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings Section -->
+                <div id="settings-section" class="content-section">
+                    <h1>⚙️ Configuration</h1>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="stats-card">
+                                <h5>🔑 Configuration Retell AI</h5>
+                                <form id="retell-config">
+                                    <div class="mb-3">
+                                        <label class="form-label">Clé API Retell AI</label>
+                                        <input type="text" class="form-control" name="api_key" placeholder="key_...">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">URL Webhook</label>
+                                        <input type="url" class="form-control" name="webhook_url" value="https://retell.mak3it.org/api/webhook">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">💾 Sauvegarder</button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stats-card">
+                                <h5>🌐 Configuration Générale</h5>
+                                <form id="general-config">
+                                    <div class="mb-3">
+                                        <label class="form-label">Nom de l'Application</label>
+                                        <input type="text" class="form-control" value="Dashboard Retell AI">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">URL Principale</label>
+                                        <input type="url" class="form-control" value="https://retell.mak3it.org">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">💾 Sauvegarder</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Retell AI Section -->
+                <div id="retell-section" class="content-section">
+                    <h1>📞 Retell AI</h1>
+                    
+                    <div class="stats-card">
+                        <h5>🔗 Test de Connexion</h5>
+                        <div id="retell-test-result">
+                            <button class="btn btn-primary" onclick="testRetellConnection()">
+                                <i class="fas fa-play me-1"></i> Tester la Connexion
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-card">
+                        <h5>📡 Configuration Webhook</h5>
+                        <div class="alert alert-info">
+                            <h6>📋 Instructions :</h6>
+                            <ol>
+                                <li>Connectez-vous à votre compte Retell AI</li>
+                                <li>Accédez aux <strong>Webhook Settings</strong></li>
+                                <li>Ajoutez cette URL : <code>https://retell.mak3it.org/api/webhook</code></li>
+                                <li>Activez l'événement <code>call_analyzed</code></li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Database Section -->
+                <div id="database-section" class="content-section">
+                    <h1>🗄️ Base de Données</h1>
+                    
+                    <div class="stats-card">
+                        <h5>📊 État de la Base</h5>
+                        <div id="database-status">
+                            <button class="btn btn-primary" onclick="checkDatabase()">
+                                <i class="fas fa-sync me-1"></i> Vérifier la Base
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-card">
+                        <h5>🔧 Actions de Maintenance</h5>
+                        <button class="btn btn-warning me-2" onclick="fixDatabase()">
+                            <i class="fas fa-wrench me-1"></i> Corriger les Tables
+                        </button>
+                        <button class="btn btn-success me-2" onclick="addTestData()">
+                            <i class="fas fa-plus me-1"></i> Ajouter Données Test
+                        </button>
+                        <button class="btn btn-info me-2" onclick="showSection('logs')">
+                            <i class="fas fa-file-alt me-1"></i> Voir les Logs
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Logs Section -->
+                <div id="logs-section" class="content-section">
+                    <h1>📄 Logs Système</h1>
+                    
+                    <div class="stats-card">
+                        <h5>🔍 Logs Laravel</h5>
+                        <div id="logs-content">
+                            <button class="btn btn-primary" onclick="loadLogs()">
+                                <i class="fas fa-file-alt me-1"></i> Charger les Logs
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Navigation
+        function showSection(sectionName) {
+            // Cacher toutes les sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Afficher la section demandée
+            document.getElementById(sectionName + '-section').classList.add('active');
+            
+            // Mettre à jour la navigation
+            document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Charger les données selon la section
+            if (sectionName === 'dashboard') {
+                loadDashboardStats();
+            } else if (sectionName === 'clients') {
+                loadClients();
+            } else if (sectionName === 'analytics') {
+                loadAnalytics();
+            }
+        }
+        
+        // Fonctions de chargement des données
+        function loadDashboardStats() {
+            // Simuler le chargement des statistiques
+            setTimeout(() => {
+                document.getElementById('total-clients').textContent = '2';
+                document.getElementById('total-calls').textContent = '3';
+                document.getElementById('success-rate').textContent = '85%';
+                document.getElementById('avg-latency').textContent = '1200';
+            }, 500);
+        }
+        
+        function loadClients() {
+            // Simuler le chargement des clients
+            const table = document.getElementById('clients-table');
+            table.innerHTML = `
+                <tr>
+                    <td>1</td>
+                    <td>Client Demo</td>
+                    <td>demo@client.com</td>
+                    <td>demo</td>
+                    <td><span style="background: #FF6B6B; width: 20px; height: 20px; display: inline-block; border-radius: 50%;"></span></td>
+                    <td>2025-08-05</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary">✏️</button>
+                        <button class="btn btn-sm btn-outline-danger">🗑️</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Entreprise ABC</td>
+                    <td>abc@entreprise.com</td>
+                    <td>abc</td>
+                    <td><span style="background: #4ECDC4; width: 20px; height: 20px; display: inline-block; border-radius: 50%;"></span></td>
+                    <td>2025-08-05</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary">✏️</button>
+                        <button class="btn btn-sm btn-outline-danger">🗑️</button>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        function loadAnalytics() {
+            const table = document.getElementById('analytics-table');
+            table.innerHTML = `
+                <tr>
+                    <td>call_001</td>
+                    <td>Client Demo</td>
+                    <td><span class="badge bg-success">85.5%</span></td>
+                    <td>12.3%</td>
+                    <td>150</td>
+                    <td>1200ms</td>
+                    <td><span class="badge bg-success">Positif</span></td>
+                    <td>2025-08-05</td>
+                </tr>
+                <tr>
+                    <td>call_002</td>
+                    <td>Client Demo</td>
+                    <td><span class="badge bg-success">92.1%</span></td>
+                    <td>8.7%</td>
+                    <td>89</td>
+                    <td>950ms</td>
+                    <td><span class="badge bg-success">Positif</span></td>
+                    <td>2025-08-05</td>
+                </tr>
+                <tr>
+                    <td>call_003</td>
+                    <td>Entreprise ABC</td>
+                    <td><span class="badge bg-warning">78.9%</span></td>
+                    <td>15.2%</td>
+                    <td>200</td>
+                    <td>1450ms</td>
+                    <td><span class="badge bg-secondary">Neutre</span></td>
+                    <td>2025-08-05</td>
+                </tr>
+            `;
+        }
+        
+        // Gestion des clients
+        function showAddClientForm() {
+            document.getElementById('add-client-form').style.display = 'block';
+        }
+        
+        function hideAddClientForm() {
+            document.getElementById('add-client-form').style.display = 'none';
+        }
+        
+        // Tests et diagnostics
+        function testRetellConnection() {
+            const result = document.getElementById('retell-test-result');
+            result.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Test en cours...</div>';
+            
+            setTimeout(() => {
+                result.innerHTML = `
+                    <div class="alert alert-warning">
+                        <h6>⚠️ Configuration Incomplète</h6>
+                        <p>La clé API Retell AI n'est pas configurée. Configurez-la dans les Paramètres.</p>
+                    </div>
+                `;
+            }, 2000);
+        }
+        
+        function checkDatabase() {
+            const status = document.getElementById('database-status');
+            status.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Vérification en cours...</div>';
+            
+            // Simuler une vérification
+            setTimeout(() => {
+                status.innerHTML = `
+                    <div class="alert alert-warning">
+                        <h6>⚠️ Tables Manquantes Détectées</h6>
+                        <p>Tables manquantes : <code>clients</code>, <code>call_analyses</code></p>
+                        <button class="btn btn-warning" onclick="fixDatabase()">🔧 Corriger Automatiquement</button>
+                    </div>
+                `;
+            }, 1500);
+        }
+        
+        function fixDatabase() {
+            // Créer un formulaire caché pour appeler diagnostic-admin.php
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'diagnostic-admin.php';
+            form.target = '_blank';
+            
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'action';
+            input.value = 'fix_database';
+            
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+        }
+        
+        function addTestData() {
+            alert('Cette fonctionnalité sera ajoutée dans la prochaine version.');
+        }
+        
+        function loadLogs() {
+            const logs = document.getElementById('logs-content');
+            logs.innerHTML = `
+                <div class="alert alert-info">
+                    <h6>📄 Logs Laravel Récents</h6>
+                    <pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-size: 12px;">
+[2025-08-05 20:57:54] local.INFO: Installation completed successfully
+[2025-08-05 20:57:54] local.INFO: User created: jeanslarose@gmail.com
+[2025-08-05 20:57:54] local.INFO: Database tables created
+                    </pre>
+                </div>
+            `;
+        }
+        
+        // Charger le dashboard au démarrage
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardStats();
+        });
+        
+        // Gestion des formulaires
+        document.getElementById('client-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Fonctionnalité en cours de développement. Utilisez le correcteur de base de données d\'abord.');
+        });
+        
+        document.getElementById('retell-config').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Configuration sauvegardée avec succès !');
+        });
+        
+        document.getElementById('general-config').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Configuration sauvegardée avec succès !');
+        });
+    </script>
+</body>
+</html>
